@@ -30,7 +30,7 @@ primeterm = []
 outyear = 0
 
 def normalout(prm, yr, mt, dday):
-    print(f'{prm}: {yr:04}/{mt:02}/{dday:02}')
+    print('{}: {:04}/{:02}/{:02}'.format(prm, yr, mt, dday))
 
 def bannerout(prm, yr, mt, dday):
     global preyr, premt, mtday
@@ -38,21 +38,21 @@ def bannerout(prm, yr, mt, dday):
         if 0 < mtday:
             print(bckblk, end='', flush=True)
             while mtday <= 31:
-                print(f'{mtday:02}', end='', flush=True)
+                print('{:02}'.format(mtday), end='', flush=True)
                 mtday += 1
             print(endsgr, end='', flush=True)
 
         mtday = 1
-        print(f'\r\n{prm}: ', end='', flush=True)
-        print(f'{yr:04}/{mt:02}/', end='', flush=True)
+        print('\r\n{}: '.format(prm), end='', flush=True)
+        print('{:04}/{:02}/'.format(yr,mt), end='', flush=True)
 
         print(bckblk, end='', flush=True)
         while mtday < dday:
-            print(f'{mtday:02}', end='', flush=True)
+            print('{:02}'.format(mtday), end='', flush=True)
             mtday += 1
         print(endsgr, end='', flush=True)
 
-        prmday = chrred + f'{dday:02}' + endsgr
+        prmday = chrred + '{:02}'.format(dday) + endsgr
         print(prmday, end='', flush=True)
         mtday = dday + 1
         preyr = yr
@@ -60,11 +60,11 @@ def bannerout(prm, yr, mt, dday):
     else:
         print(bckblk, end='', flush=True)
         while mtday < dday:
-            print(f'{mtday:02}', end='', flush=True)
+            print('{:02}'.format(mtday), end='', flush=True)
             mtday += 1
         print(endsgr, end='', flush=True)
 
-        prmday = chrred + f'{dday:02}' + endsgr
+        prmday = chrred + '{:02}'.format(dday) + endsgr
         print(prmday, end='', flush=True)
         mtday = dday + 1
 
@@ -108,14 +108,14 @@ def day2dal(day):
         if 0 < mtday:
             print(bckblk, end='', flush=True)
             while mtday <= 31:
-                print(f'{mtday:02}', end='', flush=True)
+                print('{:02}'.format(mtday), end='', flush=True)
                 mtday += 1
             print(endsgr, end='', flush=True)
         print()
         exit()
     else:
         prmpt = ('-', '\\', '|', '/')
-        print(f'{prmpt[day%4]}\r', end='', flush=True)
+        print('{}\r'.format(prmpt[day%4]), end='', flush=True)
         lstyr = outyear - yr
         if (1 < lstyr):
             day += lstyr * 31
@@ -127,14 +127,14 @@ def day2dal(day):
 def do_prime(cnt, vl):
     #upprvl = int(math.sqrt(vl))
     upprvl = vl
-    #print(f'upprvl:{upprvl}')
+    #print('upprvl:{upprvl}')
     for dv in range(upprvl):
         if 1 < dv:
             if (vl % dv) == 0:
                 vl += 1
                 break
     else:
-        #print(f'day2dal({vl})')
+        #print('day2dal({vl})')
         vl = day2dal(vl)
         cnt += 1
         #tm.sleep(1)
@@ -150,7 +150,7 @@ def term_prime(strv, endv):
             break
 
 def thrd_print(strv, endv, cnt):
-    print(f'term_prime({strv}, {endv}) {cnt}')
+    print('term_prime({strv}, {endv}) {cnt}')
 
 def main():
     global outopt, primeterm, outyear
@@ -159,7 +159,8 @@ def main():
     argp.add_argument('-prm', '--prime', metavar='<number>', type=int, nargs='*', help='素数範囲指定:開始値 [終了値]')
     argp.add_argument('-cnt', '--count', metavar='<number>', type=int, default=0, help='表示回数指定')
     argp.add_argument('-y', '--year', metavar='<year>', type=int, default=0, help='表示対象西暦')
-    argp.add_argument('-mlt', '--multi', action='store_true', help='並列処理を有効にする')
+    #argp.add_argument('-mlt', '--multi', action='store_true', help='並列処理を有効にする')
+    argp.add_argument('-mlt', '--multi', choices=['thrd','prcs','prcspl','none'], default='none', help='並列処理を有効にする')
 
     args = argp.parse_args()
 
@@ -178,17 +179,17 @@ def main():
             vlend = primeterm[1]
     if (vlend != 0):
         if (vlend < vl):
-            print(f'The end value is less than the start value.')
+            print('The end value is less than the start value.')
             exit()
 
-    #print(f'{outmax}:{vl} - {vlend}:{outyear}')
+    #print('{outmax}:{vl} - {vlend}:{outyear}')
     if vlend == 0:
         while True:
             cnt, vl = do_prime(cnt, vl)
             if (0 < outmax) and (outmax <= cnt):
                 break
     else:
-        if not args.multi:
+        if args.multi == 'none':
             term_prime(vl, vlend)
         else:
             numofcal = (vlend - vl) + 1
@@ -201,9 +202,12 @@ def main():
                 ttlcnt = 0
                 for x in range(numofcalthrd):
                     nwcnt = subend - vl + 1
-                    #thrdtbl.append(thrd.Thread(target=thrd_print, args=[vl, subend, nwcnt]))
-                    #thrdtbl.append(thrd.Thread(target=term_prime, args=[vl, subend]))
-                    thrdtbl.append(Process(target=term_prime, args=[vl, subend]))
+                    if args.multi == 'thrd':
+                        thrdtbl.append(thrd.Thread(target=term_prime, args=[vl, subend]))
+                    elif args.multi == 'prcs':
+                        thrdtbl.append(Process(target=term_prime, args=[vl, subend]))
+                    else:
+                        thrdtbl.append(thrd.Thread(target=thrd_print, args=[vl, subend, nwcnt]))
                     thrdtbl[-1].start()
                     ttlcnt += nwcnt
                     vl += maxnumofcal
@@ -211,16 +215,19 @@ def main():
                 fraction = int(numofcal % maxnumofcal)
                 if 0 < fraction:
                     nwcnt = vlend - vl + 1
-                    #thrdtbl.append(thrd.Thread(target=thrd_print, args=[vl, vlend, nwcnt]))
-                    #thrdtbl.append(thrd.Thread(target=term_prime, args=[vl, vlend]))
-                    thrdtbl.append(Process(target=term_prime, args=[vl, vlend]))
+                    if args.multi == 'thrd':
+                        thrdtbl.append(thrd.Thread(target=term_prime, args=[vl, vlend]))
+                    elif args.multi == 'prcs':
+                        thrdtbl.append(Process(target=term_prime, args=[vl, vlend]))
+                    else:
+                        thrdtbl.append(thrd.Thread(target=thrd_print, args=[vl, vlend, nwcnt]))
                     thrdtbl[-1].start()
                     ttlcnt += nwcnt
 
                 for t in thrdtbl:
                     t.join()
 
-                print(f'Total:{ttlcnt}')
+                print('Total:{}'.format(ttlcnt))
                 pass
 
 if __name__ == '__main__':
