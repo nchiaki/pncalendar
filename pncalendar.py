@@ -10,6 +10,7 @@ import calendar as cal
 import argparse
 import threading as thrd
 from multiprocessing import Process
+from concurrent.futures import ThreadPoolExecutor
 
 maxnumofcal = 10000
 outmax = 0
@@ -198,34 +199,62 @@ def main():
             else:
                 thrdtbl = []
                 numofcalthrd = int(numofcal / maxnumofcal)
+                fraction = int(numofcal % maxnumofcal)
+                if args.multi == 'prcspl':
+                    thrds = numofcalthrd
+                    if 0 < fraction:
+                        thrds += 1
+                    exectr = ThreadPoolExecutor(max_workers=thrds)
+
                 subend = (vl + maxnumofcal) - 1
                 ttlcnt = 0
                 for x in range(numofcalthrd):
                     nwcnt = subend - vl + 1
                     if args.multi == 'thrd':
                         thrdtbl.append(thrd.Thread(target=term_prime, args=[vl, subend]))
+                        thrdtbl[-1].start()
                     elif args.multi == 'prcs':
                         thrdtbl.append(Process(target=term_prime, args=[vl, subend]))
+                        thrdtbl[-1].start()
+                    elif args.multi == 'prcspl':
+                        thrdtbl.append(exectr.submit(term_prime, vl, subend))
                     else:
                         thrdtbl.append(thrd.Thread(target=thrd_print, args=[vl, subend, nwcnt]))
-                    thrdtbl[-1].start()
+                        thrdtbl[-1].start()
                     ttlcnt += nwcnt
                     vl += maxnumofcal
                     subend += maxnumofcal
-                fraction = int(numofcal % maxnumofcal)
                 if 0 < fraction:
                     nwcnt = vlend - vl + 1
                     if args.multi == 'thrd':
                         thrdtbl.append(thrd.Thread(target=term_prime, args=[vl, vlend]))
+                        thrdtbl[-1].start()
                     elif args.multi == 'prcs':
                         thrdtbl.append(Process(target=term_prime, args=[vl, vlend]))
+                        thrdtbl[-1].start()
+                    elif args.multi == 'prcspl':
+                        thrdtbl.append(exectr.submit(term_prime, vl, vlend))
                     else:
                         thrdtbl.append(thrd.Thread(target=thrd_print, args=[vl, vlend, nwcnt]))
-                    thrdtbl[-1].start()
+                        thrdtbl[-1].start()
                     ttlcnt += nwcnt
 
-                for t in thrdtbl:
-                    t.join()
+                if args.multi == 'prcspl':
+                    for t in thrdtbl:
+                        t.result(timeout=None)
+                    '''
+                    runs = len(thrdtbl)
+                    while 0 < runs:
+                        runs = 0
+                        for t in thrdtbl:
+                            if t.running():
+                                runs += 1
+                        #tm.sleep(0.001)
+                    '''
+                    exectr.shutdown()
+                else:
+                    for t in thrdtbl:
+                        t.join()
 
                 print('Total:{}'.format(ttlcnt))
                 pass
