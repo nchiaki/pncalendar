@@ -29,6 +29,7 @@ mtday = 0
 outopt = 'nrml'
 primeterm = []
 outyear = 0
+cores = 1
 
 def normalout(prm, yr, mt, dday):
     print('{}: {:04}/{:02}/{:02}'.format(prm, yr, mt, dday))
@@ -162,6 +163,7 @@ def main():
     argp.add_argument('-y', '--year', metavar='<year>', type=int, default=0, help='表示対象西暦')
     #argp.add_argument('-mlt', '--multi', action='store_true', help='並列処理を有効にする')
     argp.add_argument('-mlt', '--multi', choices=['thrd','prcs','prcspl','none'], default='none', help='並列処理を有効にする')
+    argp.add_argument('-cpu', '--cpu', type=int, default=1, help='コア数')
 
     args = argp.parse_args()
 
@@ -170,6 +172,7 @@ def main():
         primeterm = args.prime
     outmax = args.count
     outyear = args.year
+    cores = args.cpu
 
     cnt = 0
     vl = 1
@@ -193,7 +196,11 @@ def main():
         if args.multi == 'none':
             term_prime(vl, vlend)
         else:
+            global maxnumofcal
             numofcal = (vlend - vl) + 1
+            if 1 < cores:
+                maxnumofcal = int(numofcal / (cores - 1))
+
             if numofcal <= maxnumofcal:
                 term_prime(vl, vlend)
             else:
@@ -239,6 +246,7 @@ def main():
                         thrdtbl[-1].start()
                     ttlcnt += nwcnt
 
+                #print('{} threads'.format(len(thrdtbl)))
                 if args.multi == 'prcspl':
                     for t in thrdtbl:
                         t.result(timeout=None)
