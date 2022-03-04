@@ -3,7 +3,7 @@
 '''
 素数カレンダー: 0001/01/01からの日数をカウントし、それが素数となる時の年月日を表示する
 '''
-
+import sys
 import math
 import time as tm
 import calendar as cal
@@ -30,47 +30,48 @@ outopt = 'nrml'
 primeterm = []
 outyear = 0
 cores = 1
+lgfpre = 'pncal'
 
-def normalout(prm, yr, mt, dday):
-    print('{}: {:04}/{:02}/{:02}'.format(prm, yr, mt, dday))
+def normalout(prm, yr, mt, dday, logf):
+    print('{}: {:04}/{:02}/{:02}'.format(prm, yr, mt, dday), file=logf)
 
-def bannerout(prm, yr, mt, dday):
+def bannerout(prm, yr, mt, dday, logf):
     global preyr, premt, mtday
     if (preyr != yr) or (premt != mt):
         if 0 < mtday:
-            print(bckblk, end='', flush=True)
+            print(bckblk, end='', flush=True, file=logf)
             while mtday <= 31:
-                print('{:02}'.format(mtday), end='', flush=True)
+                print('{:02}'.format(mtday), end='', flush=True, file=logf)
                 mtday += 1
-            print(endsgr, end='', flush=True)
+            print(endsgr, end='', flush=True, file=logf)
 
         mtday = 1
-        print('\r\n{}: '.format(prm), end='', flush=True)
-        print('{:04}/{:02}/'.format(yr,mt), end='', flush=True)
+        print('\r\n{}: '.format(prm), end='', flush=True, file=logf)
+        print('{:04}/{:02}/'.format(yr,mt), end='', flush=True, file=logf)
 
-        print(bckblk, end='', flush=True)
+        print(bckblk, end='', flush=True, file=logf)
         while mtday < dday:
-            print('{:02}'.format(mtday), end='', flush=True)
+            print('{:02}'.format(mtday), end='', flush=True, file=logf)
             mtday += 1
-        print(endsgr, end='', flush=True)
+        print(endsgr, end='', flush=True, file=logf)
 
         prmday = chrred + '{:02}'.format(dday) + endsgr
-        print(prmday, end='', flush=True)
+        print(prmday, end='', flush=True, file=logf)
         mtday = dday + 1
         preyr = yr
         premt = mt
     else:
-        print(bckblk, end='', flush=True)
+        print(bckblk, end='', flush=True, file=logf)
         while mtday < dday:
-            print('{:02}'.format(mtday), end='', flush=True)
+            print('{:02}'.format(mtday), end='', flush=True, file=logf)
             mtday += 1
-        print(endsgr, end='', flush=True)
+        print(endsgr, end='', flush=True, file=logf)
 
         prmday = chrred + '{:02}'.format(dday) + endsgr
-        print(prmday, end='', flush=True)
+        print(prmday, end='', flush=True, file=logf)
         mtday = dday + 1
 
-def day2dal(day):
+def day2dal(day, logf):
     dday = day
     yr = 1
     mt = 0
@@ -101,9 +102,9 @@ def day2dal(day):
 
     if (outyear == 0) or (outyear == yr):
         if outopt == 'bnnr':
-            bannerout(day, yr, mt, dday)
+            bannerout(day, yr, mt, dday, logf)
         elif outopt == 'nrml':
-            normalout(day, yr, mt, dday)
+            normalout(day, yr, mt, dday, logf)
         day += 1
     elif (outyear != 0) and (outyear < yr):
         global mtday
@@ -126,7 +127,7 @@ def day2dal(day):
 
     return day
 
-def do_prime(cnt, vl):
+def do_prime(cnt, vl, logf):
     #upprvl = int(math.sqrt(vl))
     upprvl = vl
     #print('upprvl:{upprvl}')
@@ -137,17 +138,24 @@ def do_prime(cnt, vl):
                 break
     else:
         #print('day2dal({vl})')
-        vl = day2dal(vl)
+        vl = day2dal(vl, logf)
         cnt += 1
         #tm.sleep(1)
     #vl += 1
     return cnt, vl
 
 def term_prime(strv, endv):
+    if (outopt != 'none') and (0 < len(lgfpre)):
+        fnm = lgfpre+'_'+str(strv)+'_'+str(endv)+'.log'
+        print('log:{}'.format(fnm))
+        logf = open(fnm, 'w')
+    else:
+        logf = sys.stdout
+
     cnt = 0
     vl = strv
     while vl <= endv:
-        cnt, vl = do_prime(cnt, vl)
+        cnt, vl = do_prime(cnt, vl, logf)
         if (0 < outmax) and (outmax <= cnt):
             break
 
@@ -155,8 +163,9 @@ def thrd_print(strv, endv, cnt):
     print('term_prime({strv}, {endv}) {cnt}')
 
 def main():
-    global outopt, primeterm, outyear
-    argp = argparse.ArgumentParser(description='素数カレンダー: 0001/01/01からの日数をカウントし、それが素数となる時の年月日を表示する')
+    global outopt, primeterm, outyear, lgfpre
+    argp = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+                                    description='素数カレンダー: 0001/01/01からの日数をカウントし、それが素数となる時の年月日を表示する')
     argp.add_argument('-of', '--outformat', choices=['nrml', 'bnnr', 'none'], default='nrml', help='表示方法選択')
     argp.add_argument('-prm', '--prime', metavar='<number>', type=int, nargs='*', help='素数範囲指定:開始値 [終了値]')
     argp.add_argument('-cnt', '--count', metavar='<number>', type=int, default=0, help='表示回数指定')
@@ -164,6 +173,7 @@ def main():
     #argp.add_argument('-mlt', '--multi', action='store_true', help='並列処理を有効にする')
     argp.add_argument('-mlt', '--multi', choices=['thrd','prcs','prcspl','none'], default='none', help='並列処理を有効にする')
     argp.add_argument('-cpu', '--cpu', type=int, default=1, help='コア数')
+    argp.add_argument('-log', '--log', metavar='<logFilePrefix>', nargs='?', default=lgfpre, help='ログファイル出力')
 
     args = argp.parse_args()
 
@@ -173,6 +183,10 @@ def main():
     outmax = args.count
     outyear = args.year
     cores = args.cpu
+    if args.log == lgfpre:
+        lgfpre = ''
+    elif (type(args.log) == str) and (0 < len(args.log)):
+        lgfpre = args.log
 
     cnt = 0
     vl = 1
