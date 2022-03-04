@@ -143,7 +143,7 @@ def do_prime(cnt, vl, logf):
         wttm = tm.time() - strtm
         if 0.0 < wttm:
             #print('tm.sleep({})'.format(wttm))
-            tm.sleep(wttm*100)
+            tm.sleep(wttm*1000)
         cnt += 1
         #tm.sleep(1)
     #vl += 1
