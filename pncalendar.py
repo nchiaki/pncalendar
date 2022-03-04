@@ -138,7 +138,12 @@ def do_prime(cnt, vl, logf):
                 break
     else:
         #print('day2dal({vl})')
+        strtm = tm.time()
         vl = day2dal(vl, logf)
+        wttm = tm.time() - strtm
+        if 0.0 < wttm:
+            #print('tm.sleep({})'.format(wttm))
+            tm.sleep(wttm*10)
         cnt += 1
         #tm.sleep(1)
     #vl += 1
