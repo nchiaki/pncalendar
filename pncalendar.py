@@ -11,6 +11,12 @@ import argparse
 import threading as thrd
 from multiprocessing import Process
 from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor
+
+
+dlycoefficient = 0
+maxdlytime = 0.0
+mindlytime = 1000.0
 
 maxnumofcal = 10000
 outmax = 0
@@ -128,6 +134,7 @@ def day2dal(day, logf):
     return day
 
 def do_prime(cnt, vl, logf):
+    global mindlytime, maxdlytime
     #upprvl = int(math.sqrt(vl))
     upprvl = vl
     #print('upprvl:{upprvl}')
@@ -142,8 +149,20 @@ def do_prime(cnt, vl, logf):
         vl = day2dal(vl, logf)
         wttm = tm.time() - strtm
         if 0.0 < wttm:
-            #print('tm.sleep({})'.format(wttm))
-            tm.sleep(wttm*1000)
+            if 0 < dlycoefficient:
+                dlytm = wttm * dlycoefficient
+                '''
+                minmaxrnw = False
+                if dlytm < mindlytime:
+                    mindlytime = dlytm
+                    minmaxrnw = True
+                if maxdlytime < dlytm:
+                    maxdlytime = dlytm
+                    minmaxrnw = True
+                if minmaxrnw:
+                    print('{}<= Delay <={}'.format(mindlytime, maxdlytime))
+                '''
+                tm.sleep(dlytm)
         cnt += 1
         #tm.sleep(1)
     #vl += 1
@@ -168,7 +187,7 @@ def thrd_print(strv, endv, cnt):
     print('term_prime({strv}, {endv}) {cnt}')
 
 def main():
-    global outopt, primeterm, outyear, lgfpre
+    global outopt, primeterm, outyear, lgfpre, dlycoefficient
     argp = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
                                     description='素数カレンダー: 0001/01/01からの日数をカウントし、それが素数となる時の年月日を表示する')
     argp.add_argument('-of', '--outformat', choices=['nrml', 'bnnr', 'none'], default='nrml', help='表示方法選択')
@@ -176,9 +195,10 @@ def main():
     argp.add_argument('-cnt', '--count', metavar='<number>', type=int, default=0, help='表示回数指定')
     argp.add_argument('-y', '--year', metavar='<year>', type=int, default=0, help='表示対象西暦')
     #argp.add_argument('-mlt', '--multi', action='store_true', help='並列処理を有効にする')
-    argp.add_argument('-mlt', '--multi', choices=['thrd','prcs','prcspl','none'], default='none', help='並列処理を有効にする')
+    argp.add_argument('-mlt', '--multi', choices=['thrd','prcs','prcspl','thrdpl','none'], default='none', help='並列処理を有効にする')
     argp.add_argument('-cpu', '--cpu', type=int, default=1, help='コア数')
     argp.add_argument('-log', '--log', metavar='<logFilePrefix>', nargs='?', default=lgfpre, help='ログファイル出力')
+    argp.add_argument('-dly', '--dlycoefficient', type=int, default=0, help='処理遅延係数（0:=遅延なし）')
 
     args = argp.parse_args()
 
@@ -188,6 +208,7 @@ def main():
     outmax = args.count
     outyear = args.year
     cores = args.cpu
+    dlycoefficient = args.dlycoefficient
     if args.log == lgfpre:
         lgfpre = ''
     elif (type(args.log) == str) and (0 < len(args.log)):
@@ -226,11 +247,14 @@ def main():
                 thrdtbl = []
                 numofcalthrd = int(numofcal / maxnumofcal)
                 fraction = int(numofcal % maxnumofcal)
-                if args.multi == 'prcspl':
+                if (args.multi == 'prcspl') or (args.multi == 'thrdpl'):
                     thrds = numofcalthrd
                     if 0 < fraction:
                         thrds += 1
-                    exectr = ThreadPoolExecutor(max_workers=thrds)
+                    if args.multi == 'thrdpl':
+                        exectr = ThreadPoolExecutor(max_workers=thrds)
+                    else:
+                        exectr = ProcessPoolExecutor(max_workers=thrds)
 
                 subend = (vl + maxnumofcal) - 1
                 ttlcnt = 0
@@ -242,7 +266,7 @@ def main():
                     elif args.multi == 'prcs':
                         thrdtbl.append(Process(target=term_prime, args=[vl, subend]))
                         thrdtbl[-1].start()
-                    elif args.multi == 'prcspl':
+                    elif (args.multi == 'prcspl') or (args.multi == 'thrdpl'):
                         thrdtbl.append(exectr.submit(term_prime, vl, subend))
                     else:
                         thrdtbl.append(thrd.Thread(target=thrd_print, args=[vl, subend, nwcnt]))
@@ -258,7 +282,7 @@ def main():
                     elif args.multi == 'prcs':
                         thrdtbl.append(Process(target=term_prime, args=[vl, vlend]))
                         thrdtbl[-1].start()
-                    elif args.multi == 'prcspl':
+                    elif (args.multi == 'prcspl') or (args.multi == 'thrdpl'):
                         thrdtbl.append(exectr.submit(term_prime, vl, vlend))
                     else:
                         thrdtbl.append(thrd.Thread(target=thrd_print, args=[vl, vlend, nwcnt]))
@@ -266,18 +290,9 @@ def main():
                     ttlcnt += nwcnt
 
                 #print('{} threads'.format(len(thrdtbl)))
-                if args.multi == 'prcspl':
+                if (args.multi == 'prcspl') or (args.multi == 'thrdpl'):
                     for t in thrdtbl:
                         t.result(timeout=None)
-                    '''
-                    runs = len(thrdtbl)
-                    while 0 < runs:
-                        runs = 0
-                        for t in thrdtbl:
-                            if t.running():
-                                runs += 1
-                        #tm.sleep(0.001)
-                    '''
                     exectr.shutdown()
                 else:
                     for t in thrdtbl:
