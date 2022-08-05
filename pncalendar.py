@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.9
 #   coding: utf-8
 '''
 素数カレンダー: 0001/01/01からの日数をカウントし、それが素数となる時の年月日を表示する
@@ -182,6 +182,8 @@ def term_prime(strv, endv):
         cnt, vl = do_prime(cnt, vl, logf)
         if (0 < outmax) and (outmax <= cnt):
             break
+            
+    return cnt, vl
 
 def thrd_print(strv, endv, cnt):
     print('term_prime({strv}, {endv}) {cnt}')
@@ -214,6 +216,8 @@ def main():
     elif (type(args.log) == str) and (0 < len(args.log)):
         lgfpre = args.log
 
+    print(lgfpre)
+
     cnt = 0
     vl = 1
     vlend = 0
@@ -228,8 +232,9 @@ def main():
 
     #print('{outmax}:{vl} - {vlend}:{outyear}')
     if vlend == 0:
+        #print('lgfpre:{}'.format(lgfpre), flush=True)
         while True:
-            cnt, vl = do_prime(cnt, vl)
+            cnt, vl = term_prime(cnt, vl)
             if (0 < outmax) and (outmax <= cnt):
                 break
     else:
